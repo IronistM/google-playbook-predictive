@@ -1,0 +1,59 @@
+---
+title: "Report Example"
+output: 
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(echo = FALSE)
+```
+
+# Executive Summary 
+*A high-level summary of the project in a few sentences or less.*
+
+The performance of paid search (cpc) for last week was a success. Our forecasted sales were $X and we actually generated $Y - a +Z% difference! We used 2 years of historical data from GA360 to create a forecasting model, full details found below.
+
+# Business Objective
+*What is the business goal we are trying to achieve?*
+
+Our goal is to better plan our marketing initiatives and increase accountability among our stakeholders.
+
+# Question 
+*What question(s) will we try to answer?*
+
+Was last week a success or failure for our paid search (cpc) channel?
+
+# Answer
+*What is the answer, if any?*
+
+Yes! The performance of paid search (cpc) for last week was a success. Our forecasted sales were $X and we actually generated $Y - a +Z% difference!
+
+# Insights
+*A summary of any insights with visualizations.* 
+
+The paid search (cpc) channel performed signficantly better than expected. 
+
+## Forecast vs Actual
+![](./img/forecasting-kpis-plot.png)
+
+# Actions 
+*A list of recommended actions to take with the insights*  
+
+* Dig deeper to investigate question like “why did revenue generated from paid search (cpc) exceed our forecast so greatly?”
+* Marketing mix modeling analysis to understand how much each marketing channel contributes to revenue, and how much to spend on each marketing channel
+* Reallocate paid search revenue across campaigns or to different channel (e.g. - Google Remarketing or email)
+
+# Model Summary
+*A high level summary of the model, features and any other relevant info outlined in the scope*
+
+We used the [prophet](https://facebook.github.io/prophet/docs/installation.html) R package to create a forecasting model.
+
+We used 2 years of historical data from [Google Anayltics 360 BigQuery Export](https://support.google.com/analytics/answer/3437618?hl=en)
+
+More details can be found [here (link to other documentation)]()
+
+Finally, it's likely that we can automate a solution that will generate additional incremental business value by delivering this forecasting model into a dashboard of choice (Data Studio, Tableau, Looker, other)
