@@ -8,4 +8,4 @@ Modeling](https://docs.google.com/presentation/d/1FYu-EfjkKWptt13XK7HtE825dVl_rP
 Setup
 -----
 
-Run `scripts/requirements.R` to install all required R packages.
+Run `requirements.R` to install all required R packages.

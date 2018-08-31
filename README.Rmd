@@ -12,4 +12,4 @@ This repository contains source code to support the [Google Playbook - Predictiv
 
 ## Setup
 
-Run `scripts/requirements.R` to install all required R packages.
+Run `requirements.R` to install all required R packages.
