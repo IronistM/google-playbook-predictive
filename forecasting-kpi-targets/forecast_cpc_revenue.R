@@ -1,6 +1,7 @@
 # Forecasting KPI's 
 # config ------------------------------------------------------------------
 ## load packages
+library(knitr)
 library(googleAuthR)
 library(bigQueryR)
 library(dplyr)
@@ -10,7 +11,34 @@ library(ggplot2)
 library(plotly)
 library(scales)
 
-## set variables for ease of changing, re-running analysis
+## set parameters
+## we add them at the top here for ease of changing, re-running analysis
+### extract parameters
+gcp_project_id <- "XXXXXXXXXXXXXXXX" # SET GCP PROJECT ID 
+bq_dataset <- "google_analytics_sample" # SET BQ DATASET ID 
+bq_query <- "
+#standardSQL
+SELECT 
+date AS date,
+(trafficSource.medium) AS medium,
+SUM(totals.pageviews) as pageViews,
+ROUND(SUM(IFNULL(totals.transactionRevenue/100000,0)),2) AS transactionRevenue
+FROM
+`bigquery-public-data.google_analytics_sample.ga_sessions_*`
+WHERE
+_TABLE_SUFFIX BETWEEN 
+FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 732 DAY)) AND
+FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY))
+GROUP BY
+1, 2
+HAVING
+medium = 'cpc'
+ORDER BY
+1 ASC,
+3 DESC
+"
+
+### modeling parameters
 dataset_name <- "cpc_revenue_by_date"
 train_start <- "2016-08-01"
 train_end <- "2017-07-23"
@@ -18,54 +46,30 @@ valid_start <- "2017-07-24"
 valid_end <- "2017-07-30"
 forecast_period <- 7
 
-## set options for authentication
-## Setup instructions here: http://code.markedmondson.me/googleAnalyticsR/big-query.html
-## Vingette here: https://cran.r-project.org/web/packages/bigQueryR/vignettes/bigQueryR.html
-# options(googleAuthR.client_id = "XXXXXXXXXXXXXXXX") # SET CLIENT ID
-# options(googleAuthR.client_secret = "XXXXXXXXXXXXXXXX") # SET CLIENT SECRET 
-options(googleAuthR.scopes.selected = c("https://www.googleapis.com/auth/cloud-platform"))
+## authenticate to BigQuery 
+## Go through Google oAuth2 flow (browser will open)
+## needs email that has access to the BigQuery dataset
+## Setup instructions: http://code.markedmondson.me/googleAnalyticsR/big-query.html
+## Vingette: https://cran.r-project.org/web/packages/bigQueryR/vignettes/bigQueryR.html
+## Google oAuth2: https://developers.google.com/identity/protocols/OAuth2
+bigQueryR::bqr_auth()
 
-## this will open your browser
-## Authenticate with an email that has access to the BigQuery project you need
-bqr_auth()
+###  Check auth works and in right project:
+knitr::kable(bqr_list_projects())
 
 # extract -----------------------------------------------------------------
-## set parameters for easier interpretation/reuse later
-project <- "XXXXXXXXXXXXXXXX" # SET GCP PROJECT ID 
-dataset <- "google_analytics_sample"
-query <- "
-#standardSQL
-SELECT 
-  date AS date,
-  (trafficSource.medium) AS medium,
-  SUM(totals.pageviews) as pageViews,
-  ROUND(SUM(IFNULL(totals.transactionRevenue/100000,0)),2) AS transactionRevenue
-FROM
-  `bigquery-public-data.google_analytics_sample.ga_sessions_*`
-WHERE
-  _TABLE_SUFFIX BETWEEN 
-  FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 732 DAY)) AND
-  FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY))
-GROUP BY
-  1, 2
-HAVING
-  medium = 'cpc'
-ORDER BY
-  1 ASC,
-  3 DESC
-"
-
+## Query BQ and save results as dataframe for modeling
 ## SMALL results (under ~ 100000 rows)
-bq_raw_data <- bqr_query(projectId = project, 
-                         datasetId = dataset, 
-                         query = query,
+bq_raw_data <- bqr_query(projectId = gcp_project_id, 
+                         datasetId = bq_dataset_id, 
+                         query = bq_query,
                          useLegacySql = FALSE)
 
 ## save original dataset as csv to resume work later if our session crashes
 write.csv(bq_raw_data, paste0(dataset_name, ".csv"), row.names = FALSE)
 
-# model -------------------------------------------------------------------
-## load data
+# modeling -------------------------------------------------------------------
+## load data from csv in case resuming analysis from latest data from exports
 bq_raw_data <- read.csv(paste0(dataset_name, ".csv"), 
                         stringsAsFactors = FALSE)
 ## explore data 
