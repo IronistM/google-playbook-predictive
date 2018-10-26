@@ -11,39 +11,51 @@ library(ggplot2)
 library(plotly)
 library(scales)
 
-## set parameters
-## we add them at the top here for ease of changing, re-running analysis
-### extract parameters
-gcp_project_id <- "XXXXXXXXXXXXXXXX" # SET GCP PROJECT ID 
-bq_dataset <- "google_analytics_sample" # SET BQ DATASET ID 
+## set parameters for data extraction from BQ
+### we add them at the top here for ease of changing, re-running analysis
+### 1. ADD YOUR GCP PROJECT ID 
+gcp_project_id <- "YOUR-GCP-PROJECT-ID" 
+### 2. REPLACE WITH YOUR BQ DATASET ID 
+### (OR LEAVE AS-IS TO RUN ON GA360 DEMO DATASET)
+bq_dataset <- "google_analytics_sample" 
+### 3. REPLACE "bigquery-public-data.google_analytics_sample" WITH
+### YOUR GCP PROJECT ID AND BQ DATSET ID 
+#### (OR LEAVE AS IS TO RUN ON GA360 DEMO DATASET)
 bq_query <- "
 #standardSQL
-SELECT 
-date AS date,
-(trafficSource.medium) AS medium,
-SUM(totals.pageviews) as pageViews,
-ROUND(SUM(IFNULL(totals.transactionRevenue/100000,0)),2) AS transactionRevenue
+SELECT
+  date AS date,
+  (trafficSource.medium) AS medium,
+  SUM(totals.pageviews) AS pageViews,
+  ROUND(SUM(IFNULL(totals.transactionRevenue/100000,0)),2) AS transactionRevenue
 FROM
-`bigquery-public-data.google_analytics_sample.ga_sessions_*`
+  `bigquery-public-data.google_analytics_sample.ga_sessions_*`
 WHERE
-_TABLE_SUFFIX BETWEEN 
-FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 732 DAY)) AND
-FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY))
+  _TABLE_SUFFIX BETWEEN 
+  FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 732 DAY))
+  AND FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY))
 GROUP BY
-1, 2
+  1,
+  2
 HAVING
-medium = 'cpc'
-ORDER BY
-1 ASC,
-3 DESC
+  medium = 'cpc'
+ORDER BY 
+  1 ASC,
+  3 DESC
 "
 
-### modeling parameters
+## set modeling parameters
+### 4. SET DATASET NAME TO BE RELAVANT FOR YOUR ANALYSIS 
+### (THIS WILL BE THE CSV FILE THAT IS IN GCS AND YOUR LOCAL MACHINE)
 dataset_name <- "cpc_revenue_by_date"
+### 5. SET TRAINING DATA START AND END DATES 
+### (1 YEAR MIN FOR TRAINING DATA DATE RANGE)
 train_start <- "2016-08-01"
 train_end <- "2017-07-23"
+### 6. SET TRAINING DATA START AND END DATE 
 valid_start <- "2017-07-24"
 valid_end <- "2017-07-30"
+### 7. SET FORECAST PERIOD (SAME NUMBER OF DAYS AS VALIDATION DATE RANGE ABOVE)
 forecast_period <- 7
 
 ## authenticate to BigQuery 
@@ -73,7 +85,9 @@ write.csv(bq_raw_data, paste0(dataset_name, ".csv"), row.names = FALSE)
 bq_raw_data <- read.csv(paste0(dataset_name, ".csv"), 
                         stringsAsFactors = FALSE)
 ## explore data 
-### create data frame for exploration and modelling to preserve orginal 
+### create data frame for exploration and modelling to preserve original,
+### "bq_raw_data" is an R dataframe of the query results above
+### select the 2 columns, data and transactionRevenue for modeling only
 data <- bq_raw_data %>% 
   select(ds = date, y = transactionRevenue) %>% 
   mutate(ds = as.Date(ds, format = "%Y%m%d")) 
@@ -108,6 +122,7 @@ tail(forecast[c("ds", "yhat", "yhat_lower", "yhat_upper")], n = forecast_period 
 ## remove outliers ---------------------------------------------------------
 ## create vector of outliers and convert outliers to NA 
 ## to improve forecast model accuracy 
+### 7. EDIT THESE DATES TO MATCH YOUR IDENTIFIED OUTLIERS
 outlier_dates <- c("2016-09-28", 
                    "2016-11-30", 
                    "2016-12-07", 
