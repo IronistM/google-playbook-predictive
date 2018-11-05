@@ -1,5 +1,5 @@
 ---
-title: "Power of Remarketing"
+title: "Smart Remarketing Audiences"
 output: 
   html_document: 
     toc: yes
@@ -33,7 +33,8 @@ Check auth works and in right project:
 
 ```{r, message=FALSE, warning=FALSE}
 library(dplyr)
-# kable(bqr_list_projects())
+# UNCOMMENT LINE BELOW 
+# kable(bqr_list_projects()) 
 ```
 
 # Problem definition
@@ -284,7 +285,7 @@ trans_misc_coded <- trans_trans %>%
 
 #### Not included
 
-The following variables were excluded to keep the number of columns manageable:
+The following variables were excluded to keep the number of columns manageable for the initial modeling run. These variables can be re-introduced in later iterations by emulating the code above:
 
 * full pagePath
 * source / keyword
@@ -316,9 +317,9 @@ trans_model_coded <- trans_model_coded %>%
 saveRDS(trans_model_coded, file = "data/trans_model_coded.rds")
 ```
 
-## Removing low volumn columns
+## Removing low volume columns
 
-To reduce data size and help with modeling functions later, remove columns that will have little impact.  For example, a page that has only been visited once by one observation.
+To reduce data size and help with modeling functions later, remove columns that will have little impact.  For example, a page that has only been visited once by one user.
 
 We remove entries that have less than 0.1% of that data e.g. `0.001 * nrow(trans_model_coded)`
 
@@ -397,7 +398,7 @@ The top variables are those with the largest positive `Estimate` value and the t
 
 ### Check model accuracy
 
-To check the results, the model should get a similar `transacted` value in the validation set when applied to the test and validation data sets.
+To check the results, the model should show a similar `transacted` value when applied to the validation and test data sets.
 
 ```{r}
 test_model <- function(dataset){
@@ -416,8 +417,8 @@ test_model <- function(dataset){
   )
 }
 
-message("Test dataset -> ", test_model(trans_model_test))
 message("Validation dataset -> ", test_model(trans_model_validation))
+message("Test dataset -> ", test_model(trans_model_test))
 ```
 
 Our results are similar so we have confirmed our top choices amd we can transfer them to a GA segment
@@ -427,7 +428,7 @@ Our results are similar so we have confirmed our top choices amd we can transfer
 ## Google Analytics Advanced Segment
 In addition to evaluating our model's accuracy on testing and validation datasets, we can assess the "real world" performance by creating a Advanced Segment within the GA web UI on new data (e.g. - data collected after our test and validation data sets) 
 
-In the example below, we are comparing actual (All Users) vs predicted (Model Segment) user transactions (e.g. - "Goal 1 - Purchase Completed" goal completions). We can see that our model predicts 580 users will make transactions vs the actual 600 users transacting - 96% of users!
+In the example below, we are comparing actual (All Users) vs predicted (Model Segment) user transactions (e.g. - "Goal 1 - Purchase Completed" goal completions). We can see that our model predicts 455 users will make transactions vs the actual 600 users transacting - `r scales::percent(455/600)` of users!
 
 ![](../img/example-model-segment.png)
 
