@@ -220,25 +220,73 @@ div.tocify {
 </div>
 
 
+<div id="overview" class="section level1">
+<h1>Overview</h1>
+<p>This R Markdown file is an example analysis using the <a href="https://www.blog.google/products/marketingplatform/analytics/introducing-google-analytics-sample/">the Google Analytics Sample Dataset for BigQuery</a>. You can use this code in at least 2 ways:</p>
+<ol style="list-style-type: decimal">
+<li>Reproduce the analysis on the GA Sample dataset</li>
+<li>Modify the code to run on your own GA dataset</li>
+</ol>
+<p>Please find below more details on how to proceed for either scenario.</p>
+<div id="setup-steps" class="section level2">
+<h2>Setup steps</h2>
+<p>Before running the code below, perfom the following steps:</p>
+<ul>
+<li>install all R packages by running <code>requirements.R</code> located in this repo</li>
+<li>a Google Cloud Platform project (check out the <a href="https://cloud.google.com/free/">GCP Free Tier here</a></li>
+<li>BigQuery API enabled (instructions <a href="https://cloud.google.com/apis/docs/enable-disable-apis">here</a> )</li>
+<li>GA 360 and the <a href="https://support.google.com/analytics/answer/3437618?hl=en&amp;ref_topic=3416089">BigQuery Export for Analytics</a> setup</li>
+<li>a BQ dataset to create intermediary tables from the GA dataset (<code>ga_sessions_YYYYMMDD</code> tables)</li>
+<li>a Google Cloud Storage bucket to export data from BQ for downloading to R</li>
+</ul>
+</div>
+<div id="parameters-to-change" class="section level2">
+<h2>Parameters to change</h2>
+<div id="reproduce-ga-sample-dataset-analysis" class="section level3">
+<h3>Reproduce GA sample dataset analysis</h3>
+<p>To reproduce this analysis for GA sample dataset, change the following parameters in the queries and R code below:</p>
+<ul>
+<li><code>gcp-project-id</code> - your GCP project id</li>
+<li><code>ga_sample_model</code> - your BQ dataset for intermediary tables</li>
+<li><code>bucket-name</code> - the name of your GCS bucket for exporting data from BQ</li>
+</ul>
+</div>
+<div id="run-anaylsis-on-your-ga-dataset" class="section level3">
+<h3>Run anaylsis on your GA dataset</h3>
+<p>To run this analysis on your GA dataset, change the following parameters in the queries and R code below:</p>
+<ul>
+<li><code>gcp-project-id</code> - your GCP project id</li>
+<li><code>google_analytics_sample</code> - your BigQuery dataset ID (e.g. - also the GA view ID)</li>
+<li><code>ga_sample_model</code> - your BQ dataset for intermediary tables</li>
+<li><code>bucket-name</code> - the name of your GCS bucket for exporting data from BQ</li>
+</ul>
+</div>
+</div>
+</div>
 <div id="setup-and-authentication" class="section level1">
 <h1>Setup and authentication</h1>
-<pre class="r"><code>## assumes you have client JSON saved to environment argument GAR_CLIENT_JSON
-## in .Renviron file: `GAR_CLIENT_JSON=&quot;~/path/to/clientjson.json&quot;`
-## instructions here: http://code.markedmondson.me/googleAuthR/articles/google-authentication-types.html#setting-the-client-via-google-cloud-client-json
-app_project &lt;- googleAuthR::gar_set_client(
+<div id="authentication-option-1---oauth-simple" class="section level2">
+<h2>Authentication Option 1 - OAUTH (Simple)</h2>
+<p>Use this option to run the code but this will <em>not</em> allow you to knit this document for sharing. See option 2 for a more robust authentication option</p>
+<p>Authenticate to BigQuery via the Google oAuth2 flow (browser will open). You need to use an email that has access to the BigQuery dataset. Setup instructions found in <a href="https://cran.r-project.org/web/packages/bigQueryR/vignettes/bigQueryR.html">bigQueryR Vingette</a></p>
+<pre class="r"><code>library(bigQueryR)
+bigQueryR::bqr_auth()</code></pre>
+</div>
+<div id="authentication-option-2---client-json-robust" class="section level2">
+<h2>Authentication Option 2 - Client JSON (Robust)</h2>
+<p>This option assumes you have client JSON saved to environment argument GAR_CLIENT_JSON in .Renviron file: <code>GAR_CLIENT_JSON=&quot;~/path/to/clientjson.json&quot;</code> Detailed instructions <a href="http://code.markedmondson.me/googleAuthR/articles/google-authentication-types.html#setting-the-client-via-google-cloud-client-json">here</a></p>
+<pre class="r"><code>app_project &lt;- googleAuthR::gar_set_client(
   scopes = c(&quot;https://www.googleapis.com/auth/cloud-platform&quot;))
-
-library(bigQueryR)
-
-googleAuthR::gar_auth(&quot;bq.oauth&quot;)
-
-# set BigQuery defaults
-bqr_global_project(&quot;gcp-project-id&quot;)
-bqr_global_dataset(&quot;google_analytics_sample&quot;)</code></pre>
+googleAuthR::gar_auth(&quot;bq.oauth&quot;)</code></pre>
+<p><em>Note: The author of the source code used Option 2 in order to create an HTML file for sharing the results</em></p>
+<p>Set BQ defaults here:</p>
+<pre class="r"><code>library(bigQueryR)
+bqr_global_project(&quot;gcp-project-id&quot;) # CHANGE THIS TO YOUR GCP PROJECT ID 
+bqr_global_dataset(&quot;google_analytics_sample&quot;) # CHANGE THIS TO YOUR BQ </code></pre>
 <p>Check auth works and in right project:</p>
 <pre class="r"><code>library(dplyr)
-# UNCOMMENT LINE BELOW 
-# kable(bqr_list_projects()) </code></pre>
+# kable(bqr_list_projects()) # UNCOMMENT THIS LINE TO PRINT YOUR DATA</code></pre>
+</div>
 </div>
 <div id="problem-definition" class="section level1">
 <h1>Problem definition</h1>
@@ -381,6 +429,7 @@ gcs_get_object(&quot;ga_sample_model/transactions_model.csv&quot;,
 # resave as rds for quicker loading/saving
 trans_data_all &lt;- read.csv(&quot;data/transactions_model.csv&quot;, stringsAsFactors = FALSE)
 saveRDS(trans_data_all, &quot;data/transactions_model.rds&quot;)</code></pre>
+<p><em>Note: modify the parameters above to fit your scenario, see <a href="#parameters-to-change">Parameters to change</a> above</em></p>
 <p>The downloaded data:</p>
 <pre class="r"><code>trans_data_all &lt;- readRDS(&quot;data/transactions_model.rds&quot;)
 kable(head(trans_data_all))</code></pre>
@@ -525,8 +574,8 @@ target_var_rows_rm &lt;- nrow(trans_data_all) - nrow(trans_data)
 target_var_rows_rm</code></pre>
 <pre><code>## [1] 121211</code></pre>
 </div>
-<div id="create-features-from-one-column-variables" class="section level3">
-<h3>Create features from one column variables</h3>
+<div id="create-explantory-variables" class="section level3">
+<h3>Create explantory variables</h3>
 <pre class="r"><code>library(dplyr)
 library(tidyr)
 library(broom)
@@ -961,9 +1010,7 @@ trans_model_test &lt;- trans_model_40[-splits,]</code></pre>
 <h2>Create training data set</h2>
 <p><code>fullVisitorId</code>, <code>visitId</code> and <code>clientId</code> are user keys so should be removed for modeling. <code>transacted</code> is the dependent variable.</p>
 <pre class="r"><code>raw &lt;- trans_model_train %&gt;%
-  select(-fullVisitorId, -visitId, -clientId)
-saveRDS(raw, file = &quot;data/raw.rds&quot;)
-# raw &lt;- readRDS(&quot;data/raw.rds&quot;)</code></pre>
+  select(-fullVisitorId, -visitId, -clientId)</code></pre>
 </div>
 <div id="logistic-regression" class="section level2">
 <h2>Logistic Regression</h2>

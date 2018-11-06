@@ -11,30 +11,83 @@ library(knitr)
 opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
+# Overview
+
+This R Markdown file is an example analysis using the [the Google Analytics Sample Dataset for BigQuery](https://www.blog.google/products/marketingplatform/analytics/introducing-google-analytics-sample/). You can use this code in at least 2 ways:
+
+1. Reproduce the analysis on the GA Sample dataset 
+2. Modify the code to run on your own GA dataset
+
+Please find below more details on how to proceed for either scenario.
+
+## Setup steps
+
+Before running the code below, perfom the following steps:
+
+* install all R packages by running `requirements.R` located in this repo
+* a Google Cloud Platform project (check out the [GCP Free Tier here](https://cloud.google.com/free/)
+* BigQuery API enabled (instructions [here](https://cloud.google.com/apis/docs/enable-disable-apis) )
+* GA 360 and the [BigQuery Export for Analytics](https://support.google.com/analytics/answer/3437618?hl=en&ref_topic=3416089) setup
+* a BQ dataset to create intermediary tables from the GA dataset (`ga_sessions_YYYYMMDD` tables)
+* a Google Cloud Storage bucket to export data from BQ for downloading to R
+
+## Parameters to change
+
+### Reproduce GA sample dataset analysis 
+
+To reproduce this analysis for GA sample dataset, change the following parameters in the queries and R code below: 
+
+* `gcp-project-id` - your GCP project id
+* `ga_sample_model` - your BQ dataset for intermediary tables
+* `bucket-name` - the name of your GCS bucket for exporting data from BQ
+
+### Run anaylsis on your GA dataset
+
+To run this analysis on your GA dataset, change the following parameters in the queries and R code below: 
+
+* `gcp-project-id` - your GCP project id
+* `google_analytics_sample` - your BigQuery dataset ID (e.g. - also the GA view ID)
+* `ga_sample_model` - your BQ dataset for intermediary tables
+* `bucket-name` - the name of your GCS bucket for exporting data from BQ
+
 # Setup and authentication
 
-```{r auth, message=FALSE}
-## assumes you have client JSON saved to environment argument GAR_CLIENT_JSON
-## in .Renviron file: `GAR_CLIENT_JSON="~/path/to/clientjson.json"`
-## instructions here: http://code.markedmondson.me/googleAuthR/articles/google-authentication-types.html#setting-the-client-via-google-cloud-client-json
+## Authentication Option 1 - OAUTH (Simple)
+
+Use this option to run the code but this will *not* allow you to knit this document for sharing. See option 2 for a more robust authentication option
+
+Authenticate to BigQuery via the Google oAuth2 flow (browser will open). You need to use an email that has access to the BigQuery dataset. Setup instructions found in [bigQueryR Vingette](https://cran.r-project.org/web/packages/bigQueryR/vignettes/bigQueryR.html)
+
+```{r auth-OAUTH, message=FALSE, eval=FALSE}
+library(bigQueryR)
+bigQueryR::bqr_auth()
+```
+
+## Authentication Option 2 - Client JSON (Robust)
+
+This option assumes you have client JSON saved to environment argument GAR_CLIENT_JSON in .Renviron file: `GAR_CLIENT_JSON="~/path/to/clientjson.json"` Detailed instructions [here](http://code.markedmondson.me/googleAuthR/articles/google-authentication-types.html#setting-the-client-via-google-cloud-client-json)
+
+```{r auth-JSON, message=FALSE}
 app_project <- googleAuthR::gar_set_client(
   scopes = c("https://www.googleapis.com/auth/cloud-platform"))
-
-library(bigQueryR)
-
 googleAuthR::gar_auth("bq.oauth")
+```
 
-# set BigQuery defaults
-bqr_global_project("gcp-project-id")
-bqr_global_dataset("google_analytics_sample")
+*Note: The author of the source code used Option 2 in order to create an HTML file for sharing the results*
+
+Set BQ defaults here:
+
+```{r defaults}
+library(bigQueryR)
+bqr_global_project("gcp-project-id") # CHANGE THIS TO YOUR GCP PROJECT ID 
+bqr_global_dataset("google_analytics_sample") # CHANGE THIS TO YOUR BQ 
 ```
 
 Check auth works and in right project:
 
 ```{r, message=FALSE, warning=FALSE}
 library(dplyr)
-# UNCOMMENT LINE BELOW 
-# kable(bqr_list_projects()) 
+# kable(bqr_list_projects()) # UNCOMMENT THIS LINE TO PRINT YOUR DATA
 ```
 
 # Problem definition
@@ -200,6 +253,7 @@ gcs_get_object("ga_sample_model/transactions_model.csv",
 trans_data_all <- read.csv("data/transactions_model.csv", stringsAsFactors = FALSE)
 saveRDS(trans_data_all, "data/transactions_model.rds")
 ```
+*Note: modify the parameters above to fit your scenario, see [Parameters to change](#parameters-to-change) above*
 
 The downloaded data:
 
@@ -227,7 +281,7 @@ target_var_rows_rm <- nrow(trans_data_all) - nrow(trans_data)
 target_var_rows_rm
 ```
 
-### Create features from one column variables
+### Create explantory variables
 
 ```{r message=FALSE, warning=FALSE}
 library(dplyr)
@@ -362,8 +416,6 @@ trans_model_test <- trans_model_40[-splits,]
 ```{r}
 raw <- trans_model_train %>%
   select(-fullVisitorId, -visitId, -clientId)
-saveRDS(raw, file = "data/raw.rds")
-# raw <- readRDS("data/raw.rds")
 ```
 
 ## Logistic Regression 
